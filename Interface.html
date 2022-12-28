@@ -1,0 +1,180 @@
+<!DOCTYPE html> 
+<html>
+    <head>
+        <title></title>
+            <script>
+                var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+            </script>
+            <script src=" https://code.jquery.com/jquery-3.6.1.min.js"></script>
+            <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+                <!-- High CHART LIVE 需求的函式庫 -->
+            <script src="http://code.highcharts.com/highcharts.js"></script>
+            <script src="http://code.highcharts.com/highcharts-more.js"></script>
+            <script src="http://code.highcharts.com/modules/exporting.js"></script>
+            <script>
+                var intervalID = setInterval(update_value,100)
+                function DataProcess(){
+                    const numElement = document.getElementById("num");        // 將變數位置代入值
+                    const num = numElement.value;
+                    Inject_Speed(num);
+                    const pElement = document.getElementById("Kp");
+                    const Kp = pElement.value;
+                    Inject_Kp(Kp);
+                    const iElement = document.getElementById("Ki");
+                    const Ki = iElement.value;
+                    Inject_Ki(Ki);
+                    const RpElement = document.getElementById("RPI_Kp");
+                    const RPI_Kp = RpElement.value;
+                    Inject_RKp(RPI_Kp);
+                    const RiElement = document.getElementById("RPI_Ki");
+                    const RPI_Ki = RiElement.value;
+                    Inject_RKi(RPI_Ki);
+                    const RdElement = document.getElementById("RPI_Kd");
+                    const RPI_Kd = RdElement.value;
+                    Inject_RKd(RPI_Kd);
+                }
+                function Inject_Speed(require) {
+                    $.get('/s/' + require)
+                }
+                function Inject_Kp(r_Kp) {
+                    $.get('/p/' + r_Kp)
+                }
+                function Inject_Ki(r_Ki) {
+                    $.get('/i/' + r_Ki)
+                }
+                function MotorState(MS){
+                    $.get('/w/' + MS)
+                }
+                function PIDState(PID_S){
+                    $.get('/pid/' + PID_S)
+                }
+                function Inject_RKp(RPIKp){
+                    $.get('/Rp/' + RPIKp)
+                }
+                function Inject_RKi(RPIKi){
+                    $.get('/Ri/' + RPIKi)
+                }
+                function Inject_RKd(RPIKd){
+                    $.get('/Rd/' + RPIKd)
+                }
+                var chart;
+                function update_value(){
+                     $.getJSON($SCRIPT_ROOT + '/update',        //從py的route:/update取data
+
+                    function(data){
+                        $('#Times').text(data.TT);      //將取來的data中標籤TT的資料(data[0]in py)，id標為Times
+                        $('#Speed').text(data.Sp);
+                        $('#Voltage').text(data.V);
+                        $('#Current').text(data.I);
+                        $('#RequiredSpeed').text(data.RS);
+                        $('#KpValue').text(data.Kp);
+                        $('#KiValue').text(data.Ki);
+                        $('#KdValue').text(data.Kd);
+			            $('#MotorState').text(data.MS);
+			            $('#RPIKpValue').text(data.RPI_Kp);
+			            $('#RPIKiValue').text(data.RPI_Ki);
+			            $('#RPIKdValue').text(data.RPI_Kd);
+			            $('#PIDState').text(data.PID_S);
+                        var series = chart.series[0],
+                        shift = series.data.length > 3000;  //chart上只會有3000個點，超過這數量開始平移
+                        var chartData = [data.TT, data.Sp]
+                        // 畫點
+                        chart.series[0].addPoint(chartData, true, shift);
+                        //setTimeout(update_value, 100);
+                    });
+                };
+                $(document).ready(function() {
+                    chart = new Highcharts.Chart({
+                            chart: {
+                                renderTo: 'chartData',
+                                defaultSeriesType: 'spline',
+                                events: {
+                                    load: update_value
+                                }
+                            },
+                            title: {
+                                text: 'Speed Chart'
+                            },
+                            xAxis: {
+                                tickPixelInterval: 150,
+                                maxZoom: 0.1,
+                                title: {
+                                    text: 'times',
+                                    margin: 20
+                                }
+                            },
+                            yAxis: {
+                                minPadding: 0.2,
+                                maxPadding: 0.5,
+                                title: {
+                                    text: 'Value of Speed',
+                                    margin: 20
+                                }
+                            },
+                            series: [{
+                                name: 'Speed',
+                                data: []
+                            }]
+                    });
+                });
+            </script>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+        <style>
+            .dataBoard{
+                width: 1200px;
+                margin: 50px auto;
+                border: solid 1px gray;
+                overflow: hidden;
+            }
+            .number{
+                width: 300px;
+                float: left;
+                padding: 20px;
+            }
+            .chart{
+                width: 800px;
+                float: right;
+                padding: 20px 20px 0px 0px;
+            }
+            .camera{
+                width: 800px;
+                float: right;
+                padding: 20px 20px 0px 0px;
+            }
+        </style>
+    </head>
+    <body onload="update_value();">
+        <div class="dataBoard">
+            <div class="number">
+                <h2>Time: <span id="Times"></span></h2>
+                <h2>Speed: <span id="Speed"></span></h2>
+                <h2>Voltage: <span id="Voltage"></span></h2>
+                <h2>Current: <span id="Current"></span></h2>
+                <br>
+                <h2>Motor State:<span id ='MotorState'></span> <input type="button" onclick="MotorState(7)" value="off"> <input type="button" onclick="MotorState(15)" value="on"></h2>
+                <h2>required speed: <span id="RequiredSpeed"></span></h2>
+                <h2><input type="text" id="num" placeholder="input required speed"></h2>
+                <h1>PI controller in Motor driver:</h1>
+                <h2>Kp: <span id="KpValue">?</span></h2>
+                <h2><input type="text" id="Kp" placeholder="input Kp"></h2>
+                <h2>Ki: &nbsp;<span id="KiValue">?</span></h2>
+                <h2><input type="text" id="Ki" placeholder="input Ki"></h2>
+                <h1>PID controller in Raspberry Pi:</h1>
+                <h2>RPI PID State:<span id ='PIDState'></span> <input type="button" onclick="PIDState(0)" value="off"> <input type="button" onclick="PIDState(1)" value="on"></h2>
+                <h2>RPI Kp: &nbsp;<span id="RPIKpValue">?</span></h2>
+                <h2><input type="text" id="RPI_Kp" placeholder="input RPI Kp"></h2>
+                <h2>RPI Ki: &nbsp;<span id="RPIKiValue">?</span></h2>
+                <h2><input type="text" id="RPI_Ki" placeholder="input RPI Ki"></h2>
+                <h2>RPI Kd: &nbsp;<span id="RPIKdValue">?</span></h2>
+                <h2><input type="text" id="RPI_Kd" placeholder="input RPI Kd"></h2>
+                <h2><input type="button" onclick="DataProcess()" value="send"></h2>
+
+            </div>
+            <div class="chart" id="chartData">
+            </div>
+            <div class="camera">
+                <img src="{{ url_for('video') }}" width="100%"/>
+            </div>
+        </div>
+    </body>
+</html>
